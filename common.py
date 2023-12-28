@@ -4,11 +4,78 @@ import torch
 import numpy as np
 from tqdm import tqdm
 import re
+import json
+from typing import List
+from os.path import join as pjoin
+import os
 
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, RobertaForSequenceClassification, AutoModel
 
 instagram_data_dir = "instagram_100_sessions/Compiled and Totaled Sessions 2020"
 time_regex = "[0-9]+-[0-9]+-[0-9]+ [0-9]+:[0-9]+:[0-9]+"
+
+def merge_json_list_files(input_files: List[str], output_file: str):
+    file_data = {}
+    for f in input_files:
+        with open(f, 'r') as json_file:
+            json_content = json.load(json_file)
+            file_data.update(json_content)
+    with open(output_file, 'w') as json_file:
+        json.dump(file_data, json_file, indent=2)
+
+def create_session_table(session, till=-1, window_size=10, return_labels=False):
+    if till == 0:
+        raise Exception('till cannot be 0')
+
+    comments = []
+    users = []
+    labels = []
+
+    users.append(session['user'])
+    comments.append(session['content'])
+    labels.append(session['label'])
+
+    for c in session['comments']:
+        users.append(c['user'])
+        comments.append(c['content'])
+        labels.append(c['label'])
+
+    if till != -1:
+        start_idx = max(0, till - window_size)
+        end_idx = min(len(comments) -1 , till + 1)
+    else:
+        start_idx = 0
+        end_idx = len(comments) - 1
+
+    table_content = [{
+        'post_id': 1,
+        'author': users[0],
+        'comment': comments[0],
+        'active': 0
+    }]
+
+    if return_labels:
+        table_content[0]['label'] = labels[0]
+
+    # print(f'start: {start_idx}, end: {end_idx}')
+    # table will contain post_id, author, comment, is_active
+    for i in range(start_idx + 1, end_idx):
+        if till!=-1 and i>till:
+            break
+        comment_obj = {
+            'post_id': i + 1,
+            'author': users[i],
+            'comment': comments[i],
+            'active': 0 if i!=till else 1
+        }
+        if return_labels:
+            comment_obj['label'] = labels[i]
+
+        table_content.append(comment_obj)
+    dataframe = pd.DataFrame(table_content)
+    context_csv = dataframe.to_csv(index=False)
+    return context_csv, dataframe
+
 
 def get_session_info(excel_file: pd.ExcelFile, sheet_name: str):
     str_label = sheet_name.split('-')[1].strip()
