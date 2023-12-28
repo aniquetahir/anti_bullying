@@ -16,6 +16,6 @@ conda activate alpaca
 /bin/sh -c "lmql serve-model /data/huanliu/llama/hf_weights/llama2-7B --cuda --load_in_8bit True" &
 sleep 120
 #python -m pip install -U torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-cd /data/huanliu/artahir/compressed_code/anti_bullying
+cd /data/huanliu/artahir/projects/anti_bullying
 export PYTHONPATH=$(pwd)
 python stance_sentiment/lmql_query.py "$@"
