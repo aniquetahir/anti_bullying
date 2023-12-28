@@ -14,8 +14,8 @@ import lmql
 import json
 from common_generative import generate_prompt
 
-SENTIMENT_DATA_PATH = "sentiment_alpaca.json"
-STANCE_DATA_PATH = "stance_alpaca.json"
+SENTIMENT_DATA_PATH = "stance_sentiment/sentiment_alpaca.json"
+STANCE_DATA_PATH = "stance_sentiment/stance_alpaca.json"
 
 """
 Example LMQL input:
@@ -247,7 +247,9 @@ def get_lmql_responses_batched(prompts, batch_size=10, decoder='argmax', n=2, mo
                                     decoder=decoder, n=n, model=model, task=task, mode=mode))])
     return results
 
-def get_sentiment_responses(part, total_parts, task='sentiment', mode='standard'):
+def get_sentiment_responses(part, total_parts, task='sentiment', mode='standard', lm_path=LM_PATH):
+    global LM_PATH
+    LM_PATH = lm_path
     # load the data from the file
     with open(SENTIMENT_DATA_PATH, 'r') as sentiment_file:
         sentiment_data = json.load(sentiment_file)
@@ -265,10 +267,12 @@ def get_sentiment_responses(part, total_parts, task='sentiment', mode='standard'
     # filter the prompts
     sentiment_data = sentiment_data[start_idx:end_idx]
 
-    results = get_lmql_responses_batched(sentiment_data, batch_size=BATCH_SIZE, task='sentiment', mode='standard')
+    results = get_lmql_responses_batched(sentiment_data, batch_size=BATCH_SIZE, task='sentiment', mode='standard', model=lm_path)
+
+    model_str = lm_path.split('/')[-1]
 
     # save the results
-    with open(f"sentiment_results_{part}_of_{total_parts}_{task}_{mode}.pkl", 'wb') as sentiment_file:
+    with open(f"output/sentiment_results_{part}_of_{total_parts}_{task}_{mode}_{model_str}.pkl", 'wb') as sentiment_file:
         pickle.dump(results, sentiment_file)
     # print(len(results))
 
